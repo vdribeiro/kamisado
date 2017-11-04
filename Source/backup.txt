@@ -1,0 +1,2864 @@
+Jogo kamisado;
+Tabuleiro tab;
+Tabuleiro tab_aux;
+Socket sock;
+Parser parser;
+
+//DECLARACOES DE TEMPO
+void drawMyBox(float largura, float comprimento, float altura, int texture,int repX, int repY);
+void drawPontucaoP1(int p);
+void drawPontucaoP2(int p);
+long int startTime=0, timeAuxCalc=0, tempoAnterior=0;
+
+//PONTUACAO JOGADORES
+int jogador_vitorioso=0;
+int pontos1=0, pontos2=0;
+
+// declarações para o cilindro 2 (cilindro estatico)
+double cyl2_radiusb =  3.0;
+double cyl2_radiust =  1.0;
+double cyl2_height = 10.0;
+int    cyl2_slices =   11;
+int    cyl2_stacks =    4;
+int	   cyl2_smooth = false;
+double cyl2_posx   = 0.0;
+double cyl2_posy   = 2.0;
+double cyl2_posz   = 3.0;
+
+// declarações para o cilindro 1  (cilindro animado),
+double cyl1_radiusb =  1.5;
+double cyl1_radiust =  0.5;
+double cyl1_height  = 10.0;
+int    cyl1_slices =   11;
+int    cyl1_stacks =    4;
+int	   cyl1_smooth = false;
+double cyl1_posx   = 0.0;
+double cyl1_posy   = 0.0;
+double cyl1_posz   = 0.0;
+
+// respectivas transformacoes...
+double cyl1_rotx  = 0.0;
+double cyl1_roty  = 0.0;
+double cyl1_rotz  = 0.0;
+double cyl1_scalex = 1.0;
+double cyl1_scaley = 1.0;
+double cyl1_scalez = 1.0;
+double cyl1_transx = 0.0;
+double cyl1_transy = 0.0;
+double cyl1_transz = 0.0;
+
+// e incrementos de transformações
+double delta_alfa  = 1.0;	// incremento em graus para um total de 360
+double percent_alfa= delta_alfa/360.0;
+double delta_rotx  = 0.0;
+double delta_roty  = delta_alfa;
+double delta_rotz  = 0.0;
+double delta_scalex = pow(cyl2_radiusb/cyl1_radiusb,percent_alfa);
+double delta_scaley = delta_scalex;
+double delta_scalez = pow(cyl2_height/cyl1_height,percent_alfa);
+double delta_transx = (cyl2_posx-cyl1_posx)*percent_alfa;
+double delta_transy = (cyl2_posy-cyl1_posy)*percent_alfa;
+double delta_transz = (cyl2_posz-cyl1_posz)*percent_alfa;
+
+// relógio
+double clk_radiusb =  3.5;
+double clk_radiust =  3.5;
+double clk_height  = 1.5;
+int    clk_slices =   11;
+int    clk_stacks =    4;
+int	   clk_smooth = false;
+double clk_loops = 1;        // gluDisk()
+double clk_posx   = 0.0;
+double clk_posy   = 0.0;
+double clk_posz   = 0.0;
+
+// ponteiro milisegundos	
+double pont_grossura=0.1;
+double pontms_y0 = -clk_radiusb/2;
+double pontms_x = clk_radiusb;
+double pontms_y = clk_radiusb/4;
+double pontms_z=clk_height+0.1;
+double pontms_rotx  = 0.0;
+double pontms_roty  = 0.0;
+double pontms_rotz  = 0.0;
+double pontms_delta_rotz  = -360/10;
+double pontms_scalex = 0.1;
+double pontms_scaley = 0.3;
+double pontms_scalez = 0.3;
+
+// ponteiro segundos				   
+double ponts_x = 0.0;
+double ponts_y =clk_radiusb;
+double ponts_z=clk_height;
+double ponts_rotx  = 0.0;
+double ponts_roty  = 0.0;
+double ponts_rotz  = 0.0;
+double ponts_delta_rotz  = -360/60;
+
+// ponteiro minutos				   
+double pontm_x = 0.0;
+double pontm_y =clk_radiusb;
+double pontm_z=clk_height+0.1;
+double pontm_rotx  = 0.0;
+double pontm_roty  = 0.0;
+double pontm_rotz  = 0.0;
+double pontm_delta_rotz  = -360/60;
+double pontm_scalex = 1.0;
+double pontm_scaley = 1.0;
+double pontm_scalez = 1.0;
+
+// ponteiro horas		   
+double ponth_x = 0.0;
+double ponth_y=clk_radiusb;
+double ponth_z=clk_height+0.1;
+double ponth_rotx  = 0.0;
+double ponth_roty = 0.0;
+double ponth_rotz  = 0.0;
+double ponth_delta_rotz  = -360/12;
+double ponth_scaley = 0.5;
+
+//DIMENSOES BASE CANDEEIRO
+#define candeeiroBaseRadiusB 1 
+#define candeeiroTopoRadiusB 1
+#define candeeiroHeightB 15.0
+#define candeeiroSlicesB 50.0
+#define candeeiroStacksB 1.0
+
+//DIMENSOES PARTE DE CIMA DO CANDEEIRO
+#define candeeiroBaseRadiusC 1
+#define candeeiroTopoRadiusC 0.5
+#define candeeiroHeightC 15.0
+#define candeeiroSlicesC 50.0
+#define candeeiroStacksC 1.0 
+
+//CANDEEIRO CONE
+#define candeeiroHeightCone 4.0
+#define candeeiroSlicesCone 50.0
+#define candeeiroStacksCone 1.0 
+
+//CANDEEIRO HEMISPHERE
+#define candeeiroHemiSphereRadius  4.0
+#define candeeiroHemiSphereSlices 20.0
+
+//DIMENSOES ARVORE
+#define radiusBaseConeArvore 3.0
+#define alturaConeArvore 18.0
+#define slicesConeArvore 20.0
+#define stacksConeArvore 1.0
+#define larguraArvore 20.0
+#define alturaArvore 35.0
+
+//POSICAO DAS ARVORES
+#define treePosX1 25.0
+#define treePosZ1 40.0
+#define treePosX2 25.0
+#define treePosZ2 110.0
+
+#define VLENGTH 3
+#define mesaList 1
+
+int window_w=DIMX;
+int window_h=DIMY;
+
+//variaveis para a cena
+int torre_sel=1;
+double teste_x,teste_z;
+int numero_cena=1;
+int numero_vista=0;
+int numero_jogo=1;
+int nivel_jogo = 1;
+double light1x = 5;
+double light1y = candeeiroHeightB+2;
+double light1z = -14+candeeiroHeightC-1.4;
+float light1_kc = 0.0;
+float light1_kl = 1.0;
+float light1_kq = 0.0;
+float light1_position[]={-3,candeeiroHeightB,-5+candeeiroHeightC-1.4,1.0};
+double light2x = 5-75;
+double light2y = candeeiroHeightB+2+30;
+double light2z = -14+candeeiroHeightC-1.4-25;
+float light1_position2[]={light2x,light2y,light2z};
+float symb_light0_radius = 2.0;
+int symb_light0_slices = 8;
+int symb_light0_stacks =8;
+float spot_direction[]={0.0, -1.0,0.7};
+float light_ambient[] = {0.4, 0.4, 0.4, 1.0}; /* Set the background ambient lighting. */
+
+//LUZ2
+// declarações para a fonte de luz LIGHT2;
+//float light2_position[]  = {0.0, 3.0, 4.0, 1.0}; // nao necessaria...
+float light2_ambient[] =   {0.4, 0.4, 0.4, 1.0}; // sem componente ambiente
+float light2_diffuse[] =   {0.8,0.8, 0.8, 1.0};
+float light2_specular[] =  {5.0, 5.0, 5.0, 1.0};
+double light2_x = -280;
+double light2_y = 20;
+double light2_z = -120;
+double symb_light2_radius = 3;	// esfera que
+int symb_light2_slices = 8;			// simboliza a
+int symb_light2_stacks =16;			// fonte de luz light2
+float light2_position[]={light2_x,light2_y,light2_z};
+
+
+
+//LUZ3
+// declarações para a fonte de luz LIGHT3;
+
+float light3_ambient[] =   {0.5, 0.5, 1.0, 1.0}; // sem componente ambiente
+float light3_diffuse[] =   {10.0, 10.0, 10.0, 1.0};
+float light3_specular[] =  {5.0, 5.0, 5.0, 1.0};
+double light3_x = 24;
+double light3_y = 5;
+double light3_z = 20;
+double symb_light3_radius = 2;	// esfera que
+int symb_light3_slices = 8;			// simboliza a
+int symb_light3_stacks =16;			// fonte de luz light3
+float light3_position[]={light3_x,light3_y,light3_z};
+
+
+//LUZ4
+// declarações para a fonte de luz LIGHT4;
+float light4_ambient[] =   {0.9, 0.9, 0.9, 1.0}; // sem componente ambiente
+float light4_diffuse[] =   {0.4, 0.4, 0.4, 1.0};
+float light4_specular[] =  {0.2,0.2, 0.2,0.2};
+double light4_x = 58;
+double light4_y = 58;
+double light4_z = 105;
+double symb_light4_radius = 2;	// esfera que
+int symb_light4_slices = 8;			// simboliza a
+int symb_light4_stacks =16;			// fonte de luz light3
+float light4_position[]={light4_x,light4_y,light4_z};
+
+void drawRectanguloNormal();
+void cenaPrud();
+void cenaSeraphin();
+bool flagBlend = false;
+
+RGBpixmap pix[2];
+GLUquadric* glQ;
+
+class point3Df
+{	
+public: 
+	float x, y, z;
+public:
+	point3Df(void)
+	{	x = 0.0;
+		y = 0.0;
+		z = 0.0;
+	}
+	point3Df(float a, float b, float c)
+	{	x = a;
+		y = b;
+		z = c;
+	}
+};
+
+class picking
+{	
+public:
+	int nobj;
+	bool *estado;
+	point3Df *dAc;
+	int objectoSeleccionado;
+
+	picking(int n)
+	{	int i;
+    
+		nobj = n;
+		estado = (bool *) new bool[n];
+		dAc = (point3Df *)new point3Df[n];
+		for (i=0; i<n; i++)
+		{	estado[i] = false;
+		}
+		objectoSeleccionado = 0;
+	}
+	~picking(void)
+	{	if (estado != (bool *)NULL)
+			delete []estado;
+		if (dAc != (point3Df *)NULL)
+			delete []dAc;
+	}
+
+	void setEstado(int i)
+	{	estado[i]=true;
+		objectoSeleccionado = i;
+	}
+	bool getEstado(int i)
+	{	return (estado[i]);
+	}
+	void resetEstados(void)
+	{	int i;
+		for (i=0; i<nobj; i++)
+			estado[i] = false;
+	}
+	float getDx(int i)
+	{	return(dAc[i].x);
+	}
+	float getDz(int i)
+	{	return(dAc[i].z);
+	}
+	float getDy(int i)
+	{	return(dAc[i].y);
+	}
+	void setDxyz(float x, float y, float z)
+	{	dAc[objectoSeleccionado].x = x;
+		dAc[objectoSeleccionado].y = y;
+		dAc[objectoSeleccionado].z = z;
+	}
+
+	void setDxyz(int Objecto,float x, float y, float z)
+	{	dAc[Objecto].x = x;
+		dAc[Objecto].y = y;
+		dAc[Objecto].z = z;
+	}
+};
+// variaveis usadas para o picking
+double posX=0,posZ=0;
+double movx=0,movz=0;
+bool torre_selecionada=false;
+bool casa_selecionada=false;
+bool comecou_jogo=false;
+point3Df posTorres[16];
+struct estadoTorres{
+	int coord;
+	point3Df posicaoTorres[16];
+	void copia(point3Df arr[]){
+		for(int i=0;i<16;i++)
+			posicaoTorres[i]=arr[i];
+	}
+};
+estadoTorres Estado_actual;
+stack <estadoTorres> lista_jogadas;
+queue <estadoTorres> filme_jogadas;
+queue <estadoTorres> filme_jogadas_aux;
+bool movie_play=false;
+float dx=0.0, dy=0.0, dz=0.0, dxAc=0.0, dzAc=0.0;	// variaveis auxiliares de posicao
+float Xini=0, Yini=0;
+picking *pk;										// apontador para a classe que controla a posicao dos objectos
+picking *pk_tab;
+double pi = acos(-1.0);
+point3Df posTab[64];
+//variaveis usadas para a setinha
+#define mili_secs 100
+bool gaming=false;
+int n_torre=0;
+bool sentido_seta=true;
+double SPEED=0.5;
+double  ang=0,obj_radius_x=0,obj_radius_y=0,obj_radius_z=0, delta_x=0,delta_y=0, delta_z=0,delta_teta=0,raio=0;
+bool animated=false;
+bool parou_animacao=false;
+bool sentido=true;
+int objecto=0;
+//EVALUATOR Tabuleiro
+GLfloat ctrlpoints[4][3] = {	{  0.0, 0.0, 0.0},
+{  0.0, 0.0, 20.0}, 
+{ 20.0, 0.0, 0.0},
+{ 20.0, 0.0, 20.0} };
+
+GLfloat nrmlcompon[4][3] = {	{  0.0, 1.0, 0.0},
+{  0.0, 1.0, 0.0}, 
+{  0.0, 1.0, 0.0},
+{  0.0, 1.0, 0.0} };
+
+GLfloat colorpoints[4][4] = {	{ 0.0, 0.0, 0.0, 0},
+{0.0, 0.0, 0.0, 0}, 
+{0.0, 0.0, 0.0, 0},
+{0.0, 0.0, 0.0, 0} };
+
+GLfloat textpoints[4][2] = {	{ 0.0, 0.0},
+{ 1.0, 0.0}, 
+{ 0.0, 1.0},
+{ 1.0, 1.0} };
+
+//evaluator chao
+GLfloat ctrlpoints2[4][3] = {	{  -75, -25, -75},
+{  -75, -25, 75}, 
+{ 75, -25, -75},
+{ 75, -25, 75} };
+
+GLfloat textpoints2[4][2] = {	{ 0.0, 0.0},
+{ 5.0, 0.0}, 
+{ 0.0, 5.0},
+{ 5.0, 5.0} };
+
+GLfloat textpoints4[4][2] = {	{ 0.0, 0.0},
+{ 60.0, 0.0}, 
+{ 0.0, 60.0},
+{ 60.0, 60.0} };
+
+
+GLfloat textpoints3[4][2] = {	{ 0.0, 0.0},
+{ 2.0, 0.0}, 
+{ 0.0, 2.0},
+{ 2.0, 2.0} };
+
+//evaluator chaoPrisao
+GLfloat ctrlpoints3[4][3] = {	{  -150, -50, -100},
+{  -150, -50, 200}, 
+{ 150, -50, -100},
+{ 150, -50, 200} };
+
+//evaluator janela1
+GLfloat ctrlpoints4[4][3] = {	{  -150, 50, -100},
+{  -150, 0, -100}, 
+{ -150, 50, 200},
+{ -150, 0, 200} };
+
+
+//evaluator frente prisao
+GLfloat ctrlpoints5[4][3] = {	{  -60, 100, -100},
+{  -60, -50, -100}, 
+{ -60, 100, 200},
+{ -60, -50, 200} };
+
+
+//evaluator tecto Prisao
+GLfloat ctrlpoints6[4][3] = {	{  -150, 100, -100},
+{  -150, 100, 200}, 
+{ 150, 100, -100},
+{ 150, 100, 200} };
+
+//evaluator chao geral
+GLfloat ctrlpoints7[4][3] = {	{  -1500, -50.5, -1500},
+{  -1500,  -50.5, 1500}, 
+{ 1500, -50.5, -1500},
+{ 1500, -50.5, 1500} };
+
+/*
+//EVALUATOR PAREDE ESQUERDA
+//evaluator chao
+GLfloat ctrlpoints4[4][3] = {	{  -75, -25, -75},
+{  -75, -25, 75}, 
+{ 75, -25, -75},
+{ 75, -25, 75} };
+*/
+
+struct Vertex{
+	double x;
+	double y;
+	double z;
+	Vertex(){}
+	Vertex(double x, double y, double z){this->x=x;this->y=y;this->z=z;}
+};
+
+
+Vertex normalizarVector(Vertex vecAux)
+{
+	double denominador;
+		denominador = sqrt(pow(vecAux.x, 2.0)+pow(vecAux.y, 2.0)+pow(vecAux.z, 2.0));
+	return Vertex(vecAux.x/denominador, vecAux.y/denominador, vecAux.z/denominador);
+}
+
+Vertex calculaNormal(Vertex v1, Vertex v2, Vertex v3)
+{
+	Vertex vec1, vec2, vecAux;
+	
+	vec1 = Vertex(v1.x-v2.x, v1.y-v2.y, v1.z-v2.z);
+	vec2 = Vertex(v3.x-v2.x, v3.y-v2.y, v3.z-v2.z);
+
+	vecAux = Vertex(vec1.y*vec2.z - vec1.z*vec2.y, vec1.z*vec2.x - vec1.x*vec2.z, vec1.x*vec2.y - vec1.y*vec2.x);
+	return vecAux;
+}
+double angleBetweenVectors(Vertex v1,Vertex v2){
+	double dot=v1.x*v2.x+v1.y*v2.y+v1.z*v2.z;
+	double norma= sqrt(v1.x*v1.x+v1.y*v1.y+v1.z*v1.z)*sqrt(v2.x*v2.x+v2.y*v2.y+v2.z*v2.z);
+	return acos((double)dot/norma)*180/pi;
+}
+
+void myCylinder(double radius, double height, int slices, bool full=false,int text_flag=0,double ss=1,double tt=1)
+{		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D,text_flag);	
+	float pars[4];
+		pars[0]=radius;
+		pars[1]=radius;
+		pars[2]=height;
+		pars[3]=slices;
+		const double pi = acos(-1.0);
+		double n, delta, a;
+		
+
+		delta=2*pi/pars[3];
+		if(!full) delta/=2;
+		vector<Vertex> vec;
+		vector<Vertex> vec2;
+		
+		Vertex normal;
+		
+		n = delta;
+		a = 0.0;
+		
+		double delta_text=1/pars[3]/ss;
+		double n_text=delta_text;
+		double a_text=0.0;
+	
+	
+		
+		for(int i=0; i< pars[3]; i++)
+		{   
+			glBegin(GL_POLYGON);
+			normal = normalizarVector(Vertex(cos(n)* pars[0], sin(n)* pars[0], 0.0));
+			glNormal3d(normal.x, normal.y, normal.z);
+				glTexCoord2f(n_text, 0.0);
+			glVertex3f(cos(n)* pars[0], sin(n)* pars[0], 0.0); 
+			
+			normal = normalizarVector(Vertex(cos(n)* pars[1], sin(n)* pars[1],pars[2]));
+			glNormal3d(normal.x, normal.y, normal.z);
+				glTexCoord2f(n_text, 1.0*tt);
+			glVertex3f(cos(n)* pars[1], sin(n)* pars[1], pars[2]); 
+			
+			
+			normal = normalizarVector(Vertex(cos(a)* pars[1],sin(a)* pars[1],pars[2]));
+			glNormal3d(normal.x, normal.y, normal.z);
+				glTexCoord2f(a_text, 1.0*tt);
+			glVertex3f(cos(a)* pars[1],sin(a)* pars[1], pars[2]);
+			
+			normal = normalizarVector(Vertex(cos(a)* pars[0],sin(a)* pars[0], 0.0));
+			glNormal3d(normal.x, normal.y, normal.z);
+				glTexCoord2f(a_text, 0.0);
+			glVertex3f(cos(a)* pars[0],sin(a)* pars[0], 0.0); 
+			glEnd();
+			
+			
+			vec2.push_back(Vertex(cos(n)* pars[0],sin(n)* pars[0], 0.0));
+			vec2.push_back(Vertex(cos(a)* pars[0], sin(a)* pars[0], 0.0));
+			vec.push_back(Vertex(cos(n)* pars[1],sin(n)* pars[1], pars[2]));
+			vec.push_back(Vertex(cos(a)* pars[1], sin(a)* pars[1], pars[2]));
+			
+			a=n;
+			n+= delta;
+			
+			a_text=n_text;
+			n_text+= delta_text;
+			
+		}
+		vec2.push_back(Vertex(cos(a)* pars[0], sin(a)* pars[0],0));
+		vec.push_back(Vertex(cos(a)* pars[1], sin(a)* pars[1],pars[2]));
+		
+		glBegin(GL_POLYGON);
+		glNormal3d(1.0,0.0,0.0);  
+		for(int i=vec.size()-1;i>=0;i--)
+			glVertex3d( vec[i].x,vec[i].y ,vec[i].z);
+		glEnd();
+		
+		glBegin(GL_POLYGON);
+		glNormal3d(-1.0,0.0,0.0);  
+		for(int i=vec2.size()-1;i>=0;i--)
+			glVertex3d( vec2[i].x,vec2[i].y ,vec2[i].z);
+		glEnd();
+		vec.clear();
+		vec2.clear();
+		
+}
+void drawPointer(GLUquadric* glQ)
+{
+	glQ = gluNewQuadric();
+
+	
+	//glColor4b(r, g, b, 1.0);
+	
+	glPushMatrix();
+		glTranslated(0.0, 1.0, 0.0);
+		glRotated(90.0, 1, 0, 0);
+		//glEnable(GL_TEXTURE_2D);
+		//glBindTexture(GL_TEXTURE_2D, 2006);
+		//gluQuadricDrawStyle(glQ, GLU_FILL);
+		//gluQuadricTexture(glQ, GL_TRUE);
+		gluCylinder(glQ, 0.5, 0.0, 1.0, 100, 1);
+		//glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+	
+	
+	glPushMatrix();
+		glTranslated(0.0, 2.0, 0.0);
+		glRotated(90.0, 1.0, 0.0, 0.0);
+		//glEnable(GL_TEXTURE_2D);
+		//glBindTexture(GL_TEXTURE_2D, 2006);
+		//gluQuadricDrawStyle(glQ, GLU_FILL);
+		//gluQuadricTexture(glQ, GL_TRUE);
+		gluCylinder(glQ, 0.25, 0.25, 1.0, 100, 1);
+		//glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+	
+	glPushMatrix();
+		glTranslated(0.0, 2.0, 0.0);
+		glRotated(90.0, 1.0, 0.0, 0.0);
+		//glEnable(GL_TEXTURE_2D);
+		//glBindTexture(GL_TEXTURE_2D, 2006);
+		//gluQuadricDrawStyle(glQ, GLU_FILL);
+		//gluQuadricTexture(glQ, GL_TRUE);
+		gluDisk(glQ, 0.0, 0.25, 100, 1);
+		//glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+	
+	glPushMatrix();
+		glTranslated(0.0, 1.0, 0.0);
+		glRotated(90.0, 1.0, 0.0, 0.0);
+		//glEnable(GL_TEXTURE_2D);
+		//glBindTexture(GL_TEXTURE_2D, 2006);
+		//gluQuadricDrawStyle(glQ, GLU_FILL);
+		//gluQuadricTexture(glQ, GL_TRUE);
+		gluDisk(glQ, 0.0, 0.5, 100, 1);
+		//glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+	
+}
+
+void drawPontucaoP1(int p)
+{
+	int arrayFinal[2];
+	arrayFinal[0] = p/10;
+	arrayFinal[1] = p%10;
+
+	glPushMatrix();	
+		glTranslatef(-3.5, 0.0, 6);
+		glScalef(1.0, 2.0, 2.0);
+		drawMyBox(1.0,1.0,1.0, 14, 2,2);
+	glPopMatrix();
+
+	//DIGITO 0
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 8);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayFinal[0], 1,1);
+	glPopMatrix();
+
+	//DIGITO 1
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 7);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0.0,0.0,1.0);
+		glRotatef(90.0,1.0,0.0,0.0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayFinal[1], 1,1);
+	glPopMatrix();
+}
+
+
+void drawPontucaoP2(int p)
+{
+	int arrayFinal[2];
+	arrayFinal[0] = p/10;
+	arrayFinal[1] = p%10;
+
+	glPushMatrix();	
+		glTranslatef(-3.5, 0.0, 6);
+		glScalef(1.0, 2.0, 2.0);
+		drawMyBox(1.0,1.0,1.0, 14, 2,2);
+	glPopMatrix();
+
+	//DIGITO 0
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 8);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayFinal[0], 1,1);
+	glPopMatrix();
+
+	//DIGITO 1
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 7);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0.0,0.0,1.0);
+		glRotatef(90.0,1.0,0.0,0.0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayFinal[1], 1,1);
+	glPopMatrix();
+}
+
+void drawContador( long int tempoDecorrido){
+
+	long int horas=0, minutos=0, segundos=0;
+int arrayDisplay[6];
+	horas = tempoDecorrido / 3600;
+	arrayDisplay[0] = horas / 10;
+	arrayDisplay[1] = horas % 10;
+
+
+	minutos = (tempoDecorrido % 3600) / 60;
+	arrayDisplay[2] = minutos / 10;
+	arrayDisplay[3] = minutos % 10;
+	
+	segundos = (tempoDecorrido % 3600) % 60;
+	arrayDisplay[4] = segundos / 10;
+	arrayDisplay[5] = segundos % 10;
+	//CAIXA
+	glPushMatrix();	
+		glTranslatef(-3.5, 0.0, 7);
+		glScalef(1.0, 2.0, 8.0);
+		drawMyBox(1.0,1.0,1.0, 14, 2,2);
+	glPopMatrix();
+	//DIGITO 0
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 15);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[0], 1,1);
+	glPopMatrix();
+
+	//DIGITO 1
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 14);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[1], 1,1);
+	glPopMatrix();
+
+	//:
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 13);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 31, 1,1);
+	glPopMatrix();
+
+		//DIGITO 2
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 12);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[2], 1,1);
+	glPopMatrix();
+
+
+		//DIGITO 3
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 11);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[3], 1,1);
+	glPopMatrix();
+	//:
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 10);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 31, 1,1);
+	glPopMatrix();
+
+
+		//DIGITO 4
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 9);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[4], 1,1);
+	glPopMatrix();
+
+
+		//DIGITO 5
+	glPushMatrix();	
+		glTranslatef(-2.52, 0, 8);
+		glScalef(0.1, 2.0, -1);
+		glRotatef(90.0,0,0,1);
+		glRotatef(90.0,1,0,0);
+		drawMyBox(1.0,1.0,1.0, 30-arrayDisplay[5], 1,1);
+	glPopMatrix();
+
+
+}
+
+void myUpdateTransforms(int dummy)
+{
+	
+	timeAuxCalc = time(NULL);
+	long int auxDecorrido = timeAuxCalc - startTime;
+	if(auxDecorrido != tempoAnterior)
+		tempoAnterior = auxDecorrido; 	
+
+	flagBlend=!flagBlend;
+	if(!gaming){
+		if(sentido_seta){
+			n_torre++;
+			if(n_torre==8) {
+				n_torre=7;
+				sentido_seta=!sentido_seta;}
+		}else{
+			n_torre--;
+			if(n_torre==-1) {
+				n_torre=0;
+				sentido_seta=!sentido_seta;}
+		}
+	}else{
+		if(animated){
+			if(!sentido)
+				ang-=delta_teta;
+			else
+				ang+=delta_teta;
+
+			obj_radius_y = raio*cos(ang*pi/180.0);
+			obj_radius_z = raio*sin(ang*pi/180.0);
+			if(sentido && ang>=90){
+				animated=false;
+				parou_animacao=true;
+			}
+			if(!sentido && ang<=-90){
+				animated=false;
+				parou_animacao=true;
+			}
+		}
+		
+	}
+	
+	glutTimerFunc(mili_secs, myUpdateTransforms, 0);
+}
+
+
+
+void myInitTransforms(double delta_x=1,double delta_dz=1)
+{
+	obj_radius_y=0;
+	ang=-90;
+	sentido=true;
+	delta_teta = (double) mili_secs/1000.0 * SPEED *180.0;
+	if(delta_x<0 || delta_dz <0 ){
+		ang=90;
+		sentido=false;
+	}
+	raio=sqrt(delta_x*delta_x + delta_dz*delta_dz)/2.0;
+}
+void drawRectangulo(){
+	glBegin(GL_POLYGON);
+		glVertex3d(1.20, 0.0, 1.20);
+		glVertex3d(1.20, 0.0, 3.4);
+		glVertex3d(3.4, 0.0, 3.4);
+		glVertex3d(3.4, 0.0, 1.20);
+	glEnd();
+}
+
+void drawRectanguloNormal(){
+	glBegin(GL_POLYGON);
+		glNormal3d(0.0, 1.0, 0.0);
+		glVertex3d(0.0, 0.0, 0.0);
+		glVertex3d(1.0, 0.0, 0.0);
+		glVertex3d(1.0, 0.0, 1.0);
+		glVertex3d(0.0, 0.0, 1.0);
+	glEnd();
+}
+
+void drawMyBox(float largura, float comprimento, float altura, int texture = -1,int repX=1, int repY=1)
+{//Desenha uma caixa
+	if(texture>-1){
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+	}
+
+	
+	//TAMPO DE CIMA
+	glBegin(GL_POLYGON);
+		glNormal3d(0, 1, 0);
+		glTexCoord2f(0.0, 0.0); glVertex3f(0.0, altura , 0.0); 
+		glTexCoord2f(0.0, repY); glVertex3f(0.0, altura, largura); 
+		glTexCoord2f(repX, repY); glVertex3f(comprimento, altura, largura); 
+    	glTexCoord2f(repX, 0.0); glVertex3f(comprimento, altura, 0.0); 
+	glEnd();
+		   
+	//TAMPO DE BAIXO
+	glBegin(GL_POLYGON);
+	    glNormal3d(0, -1, 0);
+		glTexCoord2f(0.0, 0.0);glVertex3f(0.0, 0.0 , 0.0); 
+		glTexCoord2f(repX, 0.0);glVertex3f(comprimento, 0.0, 0.0);
+		glTexCoord2f(repX, repY);glVertex3f(comprimento, 0.0, largura);
+		glTexCoord2f(0.0, repY);glVertex3f(0.0, 0.0, largura); 
+	glEnd();			   
+	
+	//TAMPOS LATERAIS XY
+	glBegin(GL_POLYGON);
+		glNormal3d(0, 0, -1);
+		glTexCoord2f(0.0, 0.0);glVertex3f(0.0, 0.0 , 0.0);
+		glTexCoord2f(repX, 0.0);glVertex3f(comprimento, 0.0, 0.0);
+		glTexCoord2f(repX, repY);glVertex3f(comprimento, altura, 0.0);
+		glTexCoord2f(0.0, repY);glVertex3f(0.0, altura, 0.0);
+	glEnd();			   
+
+	glBegin(GL_POLYGON);
+		glNormal3d(0, 0, 1);
+		glTexCoord2f(0.0, 0.0);glVertex3f(0.0, 0.0 , largura); 
+		glTexCoord2f(repX, 0.0);glVertex3f(0.0, altura, largura);
+		glTexCoord2f(repX, repY);glVertex3f(comprimento, altura, largura);
+		glTexCoord2f(0.0, repY);glVertex3f(comprimento, 0.0, largura); 
+	glEnd();	
+
+	//TAMPOS LATERAIS ZY
+	glBegin(GL_POLYGON);
+		glNormal3d(-1, 0, 0);
+		glTexCoord2f(0.0, 0.0);glVertex3f(0.0, 0.0 , 0.0);
+		glTexCoord2f(repX, 0.0);glVertex3f(0.0, 0.0, largura);
+		glTexCoord2f(repX, repY);glVertex3f(0.0, altura, largura);
+		glTexCoord2f(0.0, repY);glVertex3f(0.0, altura, 0.0);
+	glEnd();	
+	
+	glBegin(GL_POLYGON);
+		glNormal3d(1, 0, 0);
+		glTexCoord2f(repX, repY);glVertex3f(comprimento, 0.0 , 0.0);
+		glTexCoord2f(repX, 0.0);glVertex3f(comprimento, altura, 0.0);
+		glTexCoord2f(0.0, 0.0);glVertex3f(comprimento, altura, largura);
+		glTexCoord2f(0.0, repY);glVertex3f(comprimento, 0.0, largura);
+	glEnd();
+	
+	if(texture>-1)
+		glDisable(GL_TEXTURE_2D);
+}
+
+void drawTorre(int player,int n_torre)
+{
+	
+	double torre_raio_maior=1;
+	double torre_factor=0.7;
+	double torre_altura=3;
+	double ss=1.5, tt=9.0;
+	double torre_raio_cilindro_maior=0.2;
+	Vertex ox(1,0,0);
+	vector<Vertex> vecPontosBase, vecPontosAltura;
+	double delta=2.0*pi/8, deltaA=0.0, deltaB=delta/2.0;
+	Vertex normal;
+
+glPushMatrix();
+	if(jogador_vitorioso==player)
+		glScalef(0.5,0.5,0.5);
+
+	for(int k=0; k< 9;k++)
+	{
+		vecPontosBase.push_back(Vertex(torre_raio_maior*cos(deltaA), 0.0, torre_raio_maior*sin(deltaA)));
+		deltaA += delta;
+	}
+	vecPontosBase.push_back(Vertex(torre_raio_maior*cos(deltaA), 0.0, torre_raio_maior*sin(deltaA)));
+	deltaA=0.0;
+	deltaB = delta/2.0;
+	
+	
+	for(int k=0; k< 9;k++)
+	{
+		vecPontosAltura.push_back(Vertex(torre_factor*torre_raio_maior*cos(deltaA), torre_altura, torre_factor*torre_raio_maior*sin(deltaA)));
+		deltaA += delta;
+	}
+	vecPontosAltura.push_back(Vertex(torre_factor*torre_raio_maior*cos(deltaA), torre_altura, torre_factor*torre_raio_maior*sin(deltaA)));
+	
+	
+	for(int k=0; k<vecPontosBase.size()-1;k++)
+	{
+		normal = calculaNormal(vecPontosBase[k], vecPontosBase[k+1], vecPontosAltura[k+1]);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 2003+n_torre);
+		glBegin(GL_POLYGON);
+			glNormal3d(normal.x, normal.y, normal.z);
+				glTexCoord2f(ss, 0.0); glVertex3d(vecPontosBase[k].x, vecPontosBase[k].y, vecPontosBase[k].z);
+				glTexCoord2f(ss, tt); glVertex3d(vecPontosAltura[k].x, vecPontosAltura[k].y, vecPontosAltura[k].z);
+				glTexCoord2f(0.0, tt); glVertex3d(vecPontosAltura[k+1].x, vecPontosAltura[k+1].y, vecPontosAltura[k+1].z);
+				glTexCoord2f(0.0, 0.0); glVertex3d(vecPontosBase[k+1].x, vecPontosBase[k+1].y, vecPontosBase[k+1].z);
+		
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
+		
+		double distancia= sqrt( pow((vecPontosAltura[k].x+vecPontosAltura[k+1].x),2)+pow((vecPontosAltura[k].y+vecPontosAltura[k+1].y),2)+pow((vecPontosAltura[k].z+vecPontosAltura[k+1].z),2));
+		double tam_box=distancia/3.0;
+		double ang=angleBetweenVectors(ox,normal);
+		if((k>=1 && k<4) || k==8)
+			ang=-ang;
+
+		double pos_torres[1][6]={{-torre_raio_cilindro_maior,0,0,-torre_raio_cilindro_maior,0,-torre_raio_cilindro_maior}};
+		if(k!=0){
+		glPushMatrix();
+			glTranslated(vecPontosAltura[k].x,torre_altura,vecPontosAltura[k].z);
+			glRotatef(ang,0,1,0);
+			glTranslated(pos_torres[0][0],pos_torres[0][1],pos_torres[0][2]);
+			drawMyBox(torre_raio_cilindro_maior,torre_raio_cilindro_maior,torre_raio_cilindro_maior, 2003+n_torre,1.0,1.0);
+		glPopMatrix();}
+		
+		glPushMatrix();
+			glTranslated(vecPontosAltura[k+1].x,torre_altura,vecPontosAltura[k+1].z);
+			glRotatef(ang,0,1,0);
+			glTranslated(pos_torres[0][3],pos_torres[0][4],pos_torres[0][5]);
+			drawMyBox(torre_raio_cilindro_maior,torre_raio_cilindro_maior,torre_raio_cilindro_maior, 2003+n_torre,1.0,1.0);
+		glPopMatrix();
+		
+	}
+	
+	glBegin(GL_POLYGON);
+	glNormal3d(-1.0,0.0,0.0);  
+	for(int i= vecPontosAltura.size()-1;i>=0;i--)
+		glVertex3d( vecPontosAltura[i].x,2.9 ,vecPontosAltura[i].z);
+	glEnd();
+
+	vecPontosBase.clear();
+	vecPontosAltura.clear();
+
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D,2010+player);
+	gluQuadricDrawStyle(glQ, GLU_FILL);
+	gluQuadricTexture(glQ, GL_TRUE);
+
+	glPushMatrix();
+		glTranslated(0.0, torre_altura, 0.0);
+		glRotated(-90.0, 1.0 , 0.0, 0.0);
+			gluDisk	(	glQ , 0.0 , torre_raio_cilindro_maior*3.5 ,8 ,8);
+	glPopMatrix();
+glPopMatrix();
+	glDisable(GL_TEXTURE_2D);
+	
+}
+
+void drawTabuleiro(GLenum mode)
+{
+glPushMatrix();
+	if(numero_cena==2)
+		glTranslatef(0,-0.8,0);
+
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+	glEnable(GL_MAP2_TEXTURE_COORD_2);
+	
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints[0][0]);
+	
+	glMapGrid2f(20, 0.0, 1.0, 20, 0.0, 1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+	if(numero_cena==2)
+		 glBindTexture(GL_TEXTURE_2D, 2001);
+	else
+		glBindTexture(GL_TEXTURE_2D, 6969);
+
+	glEvalMesh2(GL_FILL, 0,20, 0,20);	
+	
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+	//glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_MAP2_TEXTURE_COORD_2);	
+glPopMatrix();
+if(numero_cena==1){
+	myMaterial(PNEU);
+	glPushMatrix();
+		glTranslatef(0,-1,0);
+		drawMyBox(20,20,0.9);
+	glPopMatrix();
+	myMaterial(TRANSPARENTE);
+}
+	double inc=2.2;
+	double tranx=0; 
+	double trany=0;
+	int nomeCasa=30;
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	for(int i=0;i<8;i++){
+		for(int j=0;j<8;j++){
+		if(mode == GL_SELECT)	
+			glLoadName (nomeCasa++);
+		glPushMatrix();
+		
+		posTab[j+i*8].x=tranx+(1.2+2.2/2);
+		posTab[j+i*8].y=0.0;
+		posTab[j+i*8].z=trany+(1.2+2.2/2);
+		glTranslated(tranx,0.1,trany);
+		if(numero_cena==2){
+			glDisable(GL_BLEND);
+			glTranslated(1.20, -1, 1.20);
+		}
+		if(casa_selecionada && flagBlend && (pk_tab->objectoSeleccionado-30) == (j+i*8) ){
+			float r=(rand()%5) + 8;
+			myMaterial(r);
+			
+			if(numero_cena==1)
+				drawRectangulo();
+			else
+				drawMyBox(2.1,2.1,0.8);
+			myMaterial(TRANSPARENTE);
+		}else {
+		myMaterial(TABULEIRO);
+			if(numero_cena==1)
+				drawRectangulo();
+			else{
+					myMaterial(cores_tabuleiro[i][j]);
+				drawMyBox(2.1,2.1,0.8);
+			}
+			myMaterial(TRANSPARENTE);
+		}
+
+		tranx+=inc;
+		glPopMatrix();
+			
+		}
+		tranx=0;
+		trany +=inc;
+	}
+	
+	glDisable(GL_BLEND);
+}
+void normalise(GLdouble *vec)
+{
+  GLdouble length = 0.0;
+  int i;
+
+  for (i=0;i<VLENGTH;i++){
+     length += vec[i]*vec[i]; 
+  }
+  length= (GLdouble) sqrt((double)length); 
+
+  for (i=0;i<VLENGTH;i++){
+     vec[i] = vec[i]/length; 
+  }
+}
+
+
+
+
+void newellSquare(GLdouble *vec1,GLdouble *vec2,GLdouble *vec3,GLdouble *vec4,GLdouble *normal)
+{
+  normal[0] = (vec1[1]-vec2[1])*(vec1[2]+vec2[2]) + 
+	      (vec2[1]-vec3[1])*(vec2[2]+vec3[2]) + 
+	      (vec3[1]-vec4[1])*(vec3[2]+vec4[2]) +
+	      (vec4[1]-vec1[1])*(vec4[2]+vec1[2]);
+  normal[1] = (vec1[2]-vec2[2])*(vec1[0]+vec2[0]) + 
+	      (vec2[2]-vec3[2])*(vec2[0]+vec3[0]) + 
+	      (vec3[2]-vec4[2])*(vec3[0]+vec4[0]) +
+	      (vec4[2]-vec1[2])*(vec4[0]+vec1[0]);
+  normal[2] = (vec1[0]-vec2[0])*(vec1[1]+vec2[1]) + 
+	      (vec2[0]-vec3[0])*(vec2[1]+vec3[1]) + 
+	      (vec3[0]-vec4[0])*(vec3[1]+vec4[1]) +
+	      (vec4[0]-vec1[0])*(vec4[1]+vec1[1]);
+
+  normalise(normal);
+
+}
+
+void paralelo(GLdouble dimx, GLdouble dimy, GLdouble dimz){
+	GLdouble dx=dimx/2, dy=dimy/2, dz=dimz/2;
+	double ss=10.0,tt=0.2;
+	GLdouble v1[3] = {dx,-dy,dz};
+	GLdouble v2[3] = {dx,-dy,-dz};
+	GLdouble v3[3] = {dx,dy,dz};
+	GLdouble v4[3] = {dx,dy,-dz};
+	GLdouble v5[3] = {-dx,-dy,dz};
+	GLdouble v6[3] = {-dx,dy,dz};
+	GLdouble v7[3] = {-dx,dy,-dz};
+	GLdouble v8[3] = {-dx,-dy,-dz};
+	GLdouble normal[VLENGTH];
+
+	float mat_shininess[] = {20.0}; /* How shiny is the object (specular exponent)  */
+	float mat_specular[] = {1.0, 1.0, 1.0, 1.0}; /* specular reflection. */
+	float mat_diffuse[] = {1.0, 1.00, 1.00, 1.0}; /* diffuse reflection. */
+	// define as caracteristicas do material (dos materiais seguintes, i.e. ate nova alteracao
+	glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 2002);	
+	//Face frente - 0
+	newellSquare(v1,v3,v6,v5,normal);
+	glBegin(GL_POLYGON);
+	    glNormal3dv(normal);
+		glTexCoord2f(ss,0.0);glVertex3dv(v1);
+		glTexCoord2f(ss,tt);glVertex3dv(v3);
+		glTexCoord2f(0.0,tt);glVertex3dv(v6);
+		glTexCoord2f(0.0,0.0); glVertex3dv(v5);
+	glEnd();
+
+	// face anterior - 1
+	newellSquare(v8,v7,v4,v2,normal);
+	glBegin(GL_POLYGON);
+	    glNormal3dv(normal);
+		glVertex3dv(v8);
+		glVertex3dv(v7);
+		glVertex3dv(v4);
+		glVertex3dv(v2);
+	glEnd();
+
+	// face lateral - 2
+	newellSquare(v2,v4,v3,v1,normal);
+	glBegin(GL_POLYGON);
+ 	    glNormal3dv(normal);
+		glVertex3dv(v2);
+		glVertex3dv(v4);
+		glVertex3dv(v3);
+		glVertex3dv(v1);
+	glEnd();
+
+	newellSquare(v5,v6,v7,v8,normal);
+	glBegin(GL_POLYGON);
+	    glNormal3dv(normal);
+		glVertex3dv(v5);
+		glVertex3dv(v6);
+		glVertex3dv(v7);
+		glVertex3dv(v8);
+	glEnd();
+
+	// base
+	newellSquare(v1,v5,v8,v2,normal);
+	glBegin(GL_POLYGON);
+	    glNormal3dv(normal);
+		glVertex3dv(v1);
+		glVertex3dv(v5);
+		glVertex3dv(v8);
+		glVertex3dv(v2);
+	glEnd();
+
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 2001);			// activa a textura 2001
+
+	// topo 
+	newellSquare(v3,v4,v7,v6,normal);
+	glBegin(GL_POLYGON);
+	    glNormal3dv(normal);
+		glTexCoord2f(0.0,0.0); glVertex3dv(v3);
+		glTexCoord2f(1.0,0.0); glVertex3dv(v4);
+		glTexCoord2f(1.0,1.0); glVertex3dv(v7);
+		glTexCoord2f(0.0,1.0); glVertex3dv(v6);
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+}
+
+void initPosTorres(){
+	double tranx=0; 
+	double trany=0;
+	double inc=2.2;
+	for(int i=0;i<16;i++){	
+		posTorres[i].x=1.2+2.2/2+tranx;
+		posTorres[i].y=0;
+		posTorres[i].z=1.2+2.2/2+trany;
+		tranx+=inc;
+			if(i==7){
+				tranx=0;
+				trany=(1.2+2.2/2)+2.2*6;
+			}
+	}
+}
+
+void setaIntermitente(){
+		float r=(rand()%5) + 8;
+	
+		if(flagBlend){
+			glDisable(GL_DEPTH_TEST);	
+			glBlendFunc(GL_SRC_ALPHA,GL_ONE);				
+			glEnable(GL_BLEND);
+			myMaterial(r);
+		}
+		drawPointer(glQ);
+		
+
+		if(flagBlend)
+		{
+		glEnable(GL_DEPTH_TEST);					
+		glDisable(GL_BLEND);
+		myMaterial(TRANSPARENTE);
+		}
+	
+}
+
+void vistaInterior(){
+
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,0.0,-40.0);
+	glRotated(-90.0, 0.0,1.0,0.0 );
+	glRotated(-25.0, 0.0,0.0,1.0 );
+
+}
+
+void vistaExterior(){
+		glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,-20.0,-250.0);
+	glRotated(-90.0, 0.0,1.0,0.0 );
+	glRotated(-15.0, 0.0,0.0,1.0 );
+}
+
+void vistaJogador1(){
+		glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,0.0,-40.0);
+	glRotated(35.0, 1.0,0.0,0.0 );
+}
+
+void vistaJogador2(){
+		glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,0.0,-40.0);
+	glRotated(35.0, 1.0,0.0,0.0 );
+	glRotated(180.0, 0.0,1.0,0.0 );
+}
+
+void vistaPrisaoFora(){
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,-30,-170.0);
+	glRotated(-90.0, 0.0,1.0,0.0 );
+	glRotated(-15.0, 0.0,0.0,1.0 );
+}
+
+void vistaPrisaoDentro(){
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,-75,170.0);
+	glRotated(-90.0, 0.0,1.0,0.0 );
+	glRotated(-15.0, 0.0,0.0,1.0 );
+}
+
+
+void vistaPrisaoCelaMesa(){
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,-30,-190.0);
+	glRotated(120.0, 0.0,1.0,0.0 );
+	//glRotated(-15.0, 0.0,0.0,1.0 );
+}
+
+void vistaPrisaoPoco(){
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+		glMultMatrixf( view_rotate );
+	glTranslated(100.0,-30,-730.0);
+	glRotated(120.0, 0.0,1.0,0.0 );
+	//glRotated(-15.0, 0.0,0.0,1.0 );
+}
+
+void vistaTempoPont(){
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+
+	glTranslated(0.0,0.0,-12.0);
+	glRotated(-90.0, 0.0,1.0,0.0 );
+	glRotated(-25.0, 0.0,0.0,1.0 );
+
+}
+
+void drawCand();
+void drawScene(GLenum mode)
+{
+	glMatrixMode( GL_MODELVIEW );
+	glLoadIdentity();
+	myMaterial(TRANSPARENTE);
+
+
+		if(numero_vista==0)
+			vistaExterior();
+		else if(numero_vista==1)
+		 vistaInterior();
+		else if(numero_vista==3)
+			vistaJogador1();
+		else if(numero_vista==2)
+			vistaJogador2();
+		else if(numero_vista==4)
+			vistaPrisaoFora();
+		else if(numero_vista==5)
+			vistaPrisaoDentro();
+		else if(numero_vista==6)
+			vistaPrisaoCelaMesa();
+		else if(numero_vista==7)
+			vistaPrisaoPoco();
+		else if(numero_vista==8)
+			vistaTempoPont();
+
+
+    glTranslatef( obj_pos[0]-10, obj_pos[1], -obj_pos[2]-10 ); 
+	glMultMatrixf( view_rotate );
+
+	
+	if(numero_cena==1){
+		glEnable(GL_LIGHT0);
+		glEnable(GL_LIGHT1);
+		glEnable(GL_LIGHT2);
+		glDisable(GL_LIGHT3);
+		glDisable(GL_LIGHT4);
+		
+
+		light1_position[0] = light1x;	
+		light1_position[1] = light1y;	
+		light1_position[2] = light1z;
+		glLightfv(GL_LIGHT0, GL_POSITION, light1_position);
+
+		gluQuadricOrientation( glQ, GLU_INSIDE);
+		glPushMatrix();
+			glTranslated(light1x,light1y,light1z);
+			myMaterial(NEON);
+			gluSphere(glQ, symb_light0_radius, symb_light0_slices*10, symb_light0_stacks);
+			myMaterial(TRANSPARENTE);
+		 glPopMatrix();
+		gluQuadricOrientation( glQ, GLU_OUTSIDE);
+
+		light1_position2[0] = light2x+15;	
+		light1_position2[1] = light2y;	
+		light1_position2[2] = light2z;
+		glLightfv(GL_LIGHT1, GL_POSITION, light1_position2);
+
+		gluQuadricOrientation( glQ, GLU_INSIDE);
+		glPushMatrix();
+			glTranslated(light2x+8,light2y+1,light2z);
+			myMaterial(NEON);
+			gluSphere(glQ, symb_light0_radius, symb_light0_slices*10, symb_light0_stacks);
+			myMaterial(TRANSPARENTE);
+		 glPopMatrix();
+		gluQuadricOrientation( glQ, GLU_OUTSIDE);
+
+		glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, spot_direction);
+		glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spot_direction);}
+	else if(numero_cena==2){
+		glDisable(GL_LIGHT0);
+		glDisable(GL_LIGHT1);
+		glEnable(GL_LIGHT2);
+		glEnable(GL_LIGHT3);
+		glEnable(GL_LIGHT4);
+		light2_position[0] = light2_x+8;	
+		light2_position[1] = light2_y;	
+		light2_position[2] = light2_z;
+		glLightfv(GL_LIGHT2, GL_POSITION, light2_position);
+
+		gluQuadricOrientation( glQ, GLU_INSIDE);
+		glPushMatrix();
+			glTranslated(light2_x+8,light2_y,light2_z);
+			gluSphere(glQ, symb_light2_radius, symb_light2_slices, symb_light2_stacks);
+		  glPopMatrix();
+		gluQuadricOrientation( glQ, GLU_OUTSIDE);
+
+
+		light3_position[0] = light3_x;	
+		light3_position[1] = light3_y;	
+		light3_position[2] = light3_z+0.6;
+		glLightfv(GL_LIGHT3, GL_POSITION, light3_position);
+
+		gluQuadricOrientation( glQ, GLU_INSIDE);
+		glPushMatrix();
+			glTranslated(light3_x,light3_y,light3_z+0.6);
+			myMaterial(NEON);
+			gluSphere(glQ, symb_light3_radius, symb_light3_slices*10, symb_light3_stacks);
+			myMaterial(TRANSPARENTE);
+		 glPopMatrix();
+		gluQuadricOrientation( glQ, GLU_OUTSIDE);
+
+		light4_position[0] = light4_x+2;	
+		light4_position[1] = light4_y;	
+		light4_position[2] = light4_z;
+		glLightfv(GL_LIGHT4, GL_POSITION, light3_position);
+
+		gluQuadricOrientation( glQ, GLU_INSIDE);
+		glPushMatrix();
+			glTranslated(light4_x+2,light4_y,light4_z);
+			myMaterial(NEON);
+			gluSphere(glQ, symb_light4_radius, symb_light4_slices*10, symb_light4_stacks);
+			myMaterial(TRANSPARENTE);
+		glPopMatrix();
+		gluQuadricOrientation( glQ, GLU_OUTSIDE);
+	}
+	int ident_torre=11;
+	int player=1;
+	int n_torre2=7;
+
+	if(movie_play && !animated){
+		if(filme_jogadas_aux.empty()){
+					movie_play=false;
+		}else if(!kamisado.filme_aux.empty()){
+						for(int x=0;x<16;x++)
+							posTorres[x]=filme_jogadas_aux.front().posicaoTorres[x];
+		
+						if(kamisado.filme_aux.front().jogador==1){
+							pk->setEstado(17-kamisado.filme_aux.front().NTorre+10);
+							dx = posTorres[17-kamisado.filme_aux.front().NTorre-1].x;		
+							dz = posTorres[17-kamisado.filme_aux.front().NTorre-1].z;
+						}else{
+							pk->setEstado(kamisado.filme_aux.front().NTorre+10);
+							dx = posTorres[kamisado.filme_aux.front().NTorre-1].x;		
+							dz = posTorres[kamisado.filme_aux.front().NTorre-1].z;
+						}
+
+						movx= (float)(posTab[filme_jogadas_aux.front().coord].x - dx);
+						movz= (float)(posTab[filme_jogadas_aux.front().coord].z - dz);
+						pk_tab->setEstado(filme_jogadas_aux.front().coord+30);
+						dx=dz=dxAc=dzAc=0;
+		
+						torre_selecionada=false;
+						casa_selecionada=false;
+
+						kamisado.filme_aux.pop();
+						filme_jogadas_aux.pop();
+					}
+		}
+
+	for(int i=0;i<16;i++){
+		glPushMatrix();
+			if(parou_animacao && i==objecto){
+				posTorres[i].x= posTab[pk_tab->objectoSeleccionado-30].x;
+				posTorres[i].z= posTab[pk_tab->objectoSeleccionado-30].z;
+				parou_animacao=false;
+				animated=false;
+				pk->resetEstados();
+				pk_tab->resetEstados();
+				if(tab.jogador==1){
+					pk->setEstado(17-tab.NTorre+10);
+					dx = posTorres[17-tab.NTorre-1].x;		
+					dz = posTorres[17-tab.NTorre-1].z;
+				}else{
+					pk->setEstado(tab.NTorre+10);
+					dx = posTorres[tab.NTorre-1].x;		
+					dz = posTorres[tab.NTorre-1].z;
+				}
+				if(tab.modo==3){
+					if(tab.pc_joga == 0)
+						tab.pc_joga=1;
+					else
+						tab.pc_joga=0;
+				}
+				if(!movie_play)
+				torre_selecionada=true;
+				casa_selecionada=false;
+				movx=movz=0;
+			}
+		
+			glTranslated(posTorres[i].x,posTorres[i].y,posTorres[i].z);
+			
+			glLoadName (ident_torre++);
+			if(animated && i==objecto ){
+				if( (teste_x>0 && teste_z>0) || (teste_x<0 && teste_z<0))
+						glRotatef(45,0,1,0);
+				else if(teste_x<0 && teste_z>0)
+						glRotatef(135,0,1,0);
+				else if(teste_x >0 && teste_z < 0)
+					glRotatef(-45,0,1,0);
+				if(!sentido)
+					glTranslated(0.0,obj_radius_y,obj_radius_z-raio);
+				else
+					glTranslated(0.0,obj_radius_y,obj_radius_z+raio);
+			}
+			if(pk->objectoSeleccionado == (ident_torre-1)){
+				if(!animated&&pk_tab->objectoSeleccionado>=10 && pk->getEstado(pk->objectoSeleccionado) && pk_tab->getEstado(pk_tab->objectoSeleccionado)){
+					obj_radius_z=posTorres[i].z;
+					myInitTransforms(movx,movz);
+					teste_x=movx;teste_z=movz;
+					movx=0;movz=0;
+					animated=true;
+					objecto=pk->objectoSeleccionado-11;
+					pk->resetEstados();
+				}
+		   }
+		
+			if(player==2){
+				drawTorre(player,n_torre2);
+				n_torre2--;
+			}
+			else
+				drawTorre(player,i);
+			if(i==7)
+				player=2;
+		
+		glPopMatrix();
+	}
+	
+		
+
+
+	glLoadName (0);
+
+	
+	drawTabuleiro(mode);
+	
+
+
+
+	
+
+	if(gaming && torre_selecionada){
+		glPushMatrix();
+			glTranslated(posTorres[pk->objectoSeleccionado-11].x,3.6,posTorres[pk->objectoSeleccionado-11].z);
+			setaIntermitente();
+		glPopMatrix();
+	}
+
+	
+	if(!gaming){
+		float r=(rand()%5) + 8;
+	
+	
+		if(flagBlend){
+		glDisable(GL_DEPTH_TEST);	
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE);				
+		glEnable(GL_BLEND);
+		myMaterial(r);
+		}
+		glPushMatrix();
+			glTranslatef(posTorres[n_torre].x,3.6,posTorres[n_torre].z);
+			drawPointer(glQ);
+		glPopMatrix();
+		if(flagBlend)
+		{
+		glEnable(GL_DEPTH_TEST);					
+		glDisable(GL_BLEND);
+		myMaterial(TRANSPARENTE);
+		}	
+	}
+
+	
+	if(numero_cena==1){myMaterial(TRANSPARENTE);
+		glCallList(1);
+		myMaterial(TRANSPARENTE);
+		
+	}
+	if(numero_cena==2){
+		glCallList(2);
+		myMaterial(TRANSPARENTE);
+//CAND 1
+	glPushMatrix();
+		glTranslatef(60, 10.0, 105);
+		drawCand();
+	glPopMatrix(); 
+
+	myMaterial(TRANSPARENTE);
+	//CAND 2
+		glPushMatrix();
+		glScalef(0.8, 0.8, 0.8);
+		glTranslatef(30, -42.0, 25.5);
+		drawCand();
+	glPopMatrix(); 
+	myMaterial(TRANSPARENTE);
+	}
+
+}
+
+void processMouse(int button, int state, int x, int y)
+{
+    GLuint selectBuf[BUFSIZE];
+    GLint hits;
+    GLint viewport[4];
+	
+
+	glGetIntegerv (GL_VIEWPORT, viewport);
+
+    glSelectBuffer (BUFSIZE, selectBuf);
+    (void) glRenderMode (GL_SELECT);
+
+	glInitNames();
+    glPushName(-1);
+
+    glMatrixMode (GL_PROJECTION);
+    glPushMatrix ();
+    glLoadIdentity ();
+	//  create 5x5 pixel picking region near cursor location
+    gluPickMatrix ((GLdouble) x, (GLdouble) (window_h - y), 5.0, 5.0, viewport);
+
+    glFrustum( -xy_aspect*.04, xy_aspect*.04, -.04, .04, .1, 50.0 );
+
+	drawScene(GL_SELECT);
+
+    glMatrixMode (GL_PROJECTION);
+    glPopMatrix ();
+    glFlush ();
+	
+	hits = glRenderMode (GL_RENDER);
+	int i;
+	unsigned int j;
+    GLuint nnames, *ptr;
+	GLuint selected_nnames, *selected_ptr;
+	unsigned int z1=0, z2=0;
+	unsigned int selected_z1, selected_z2;
+
+	
+	if (hits == 0)
+		return;
+
+    ptr = (GLuint *) selectBuf;
+
+    for (i = 0; i < hits; i++) 
+	{	
+		nnames = *ptr; ptr++;
+		z1 = (unsigned int)*ptr; ptr++;
+		z2 = (unsigned int)*ptr; ptr++;
+
+		if ((i == 0) || (z1 < selected_z1))
+		{
+			selected_nnames=nnames;
+			selected_z1=z1;
+			selected_z2=z2;
+			selected_ptr=ptr;
+		}
+	
+		for (j = 0; j < nnames; j++)
+			ptr++;
+	}
+
+	for (j = 0; j < selected_nnames; j++)
+			selected_ptr++;
+	
+	selected_ptr--;
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && !animated && comecou_jogo && !movie_play && jogador_vitorioso==0)
+	{
+		if(tab.modo==2 || (tab.modo==3 && tab.pc_joga==1)){
+			;
+		}else if(tab.modo==1 || (tab.modo==3 && tab.pc_joga==0)){
+		
+			int x1, y1;
+			if(*selected_ptr >= 30){ //obtem posicao da casa de destino
+		if(!torre_selecionada){
+			movx=movz=0;}
+		else{
+
+			casa_selecionada=true;
+			int coluna=  (((int)((*selected_ptr)-30)/ 8)+1);
+			int linha= 8*coluna-((*selected_ptr)-30) ;
+			
+			if(!parser.valida_jogada(tab,9-coluna,linha,sock)){
+				casa_selecionada=false;
+				torre_selecionada=false;
+				movx=0;movz=0;
+				animated=false;
+				pk_tab->resetEstados();
+			}else{
+					kamisado.jogada(tab);
+					Estado_actual.copia(posTorres);
+					lista_jogadas.push(Estado_actual);
+					Estado_actual.coord=(*selected_ptr)-30;
+					filme_jogadas.push(Estado_actual);
+
+					movx= (float)(posTab[(*selected_ptr)-30].x - dx);
+					movz= (float)(posTab[(*selected_ptr)-30].z - dz);
+					pk_tab->setEstado(*selected_ptr);
+					dx=dz=dxAc=dzAc=0;
+					parser.jogada_humana(tab,9-coluna,linha,sock);
+			}
+			jogador_vitorioso=kamisado.fim_jogo(tab);
+					parser.ganhou(tab_aux,sock);
+			if(jogador_vitorioso==1)
+				pontos2++;
+			else if(jogador_vitorioso==2)
+				pontos1++;
+		}	
+		torre_selecionada=false;
+	}else{//obtem posicao da torre
+		if(!parser.deadlock(tab,sock))
+		if(!gaming){
+			gaming=true;
+			pk->setEstado(*selected_ptr);
+			dx = posTorres[(*selected_ptr)-11].x;		
+			dz = posTorres[(*selected_ptr)-11].z;
+			if((*selected_ptr)-10 < 9){
+				tab.NTorre=(((*selected_ptr)-10));
+				tab.jogador=2;
+			}else{
+				tab.NTorre=9-((*selected_ptr)-10-8);
+				tab.jogador=1;
+			}
+			torre_selecionada=true;
+			casa_selecionada=false;
+			movx=movz=0;
+		}else{
+			if(tab.jogador==1){
+				pk->setEstado(17-tab.NTorre+10);
+				dx = posTorres[17-tab.NTorre-1].x;		
+				dz = posTorres[17-tab.NTorre-1].z;
+			}else{
+				pk->setEstado(tab.NTorre+10);
+				dx = posTorres[tab.NTorre-1].x;		
+				dz = posTorres[tab.NTorre-1].z;
+			}
+			torre_selecionada=true;
+			casa_selecionada=false;
+			movx=movz=0;
+		}
+	}
+	}
+	}
+}
+
+void apoio(){
+				//apoioEsquerdoFrente
+				glPushMatrix();
+					glTranslatef(30.0,15.0,10.0);
+					glRotatef(90,0.0,1.0,0.0);
+					glScalef(10.0,10.0,1.0);
+					glRectf(0.0,0.0,1.0,1.0);
+				glPopMatrix();
+				//apoioEsquerdoEsquerda
+				glPushMatrix();
+					glTranslatef(10.0,15.0,10.0);
+					glScalef(20.0,10.0,1.0);
+					glRectf(0.0,0.0,1.0,1.0);
+				glPopMatrix();
+				//apoioEsquerdoDireita
+				//apoioEsquerdoEsquerda
+				glPushMatrix();
+					glTranslatef(10.0,15.0,0.0);
+					glScalef(20.0,10.0,1.0);
+					glRectf(0.0,0.0,1.0,1.0);
+				glPopMatrix();
+				//apoioEsquerdoCima
+				glPushMatrix();
+					glTranslatef(10.0,25.0,0.0);
+					glRotatef(90,1.0,0.0,0.0);
+					glScalef(20.0,10.0,1.0);
+					glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+}
+
+void sofa(){
+	myMaterial(VERMELHO);
+	//SOFA
+		//encosto
+			//encostoCima
+	//myMaterial(TRANSPARENTE);
+			glPushMatrix();
+				glTranslatef(0.0,40.0,0.0);
+				glRotatef(90,1.0,0.0,0.0);
+				glScalef(10.0,70.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,1,3);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//encostoEsquerdo
+			glPushMatrix();
+				glTranslatef(0.0,0.0,70.0);
+				glScalef(10.0,40.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,3,1.15);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//encostoDireita
+			glPushMatrix();
+				glScalef(10.0,40.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,3,1.15);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//encostoFrente
+			glPushMatrix();
+				glTranslatef(10.0,0.0,70.0);
+				glRotatef(90,0.0,1.0,0.0);
+				glScalef(70.0,40.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,3,3);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+		//assento
+			//assentoCima
+			glPushMatrix();
+				glTranslatef(10.0,15.0,0.0);
+				glRotatef(90,1.0,0.0,0.0);
+				glScalef(20.0,70.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,3,3);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//assentoEsquerdo
+			glPushMatrix();
+				glTranslatef(10.0,0.0,70.0);
+				glScalef(20.0,15.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,1,1);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//assentoDireita
+			glPushMatrix();
+				glScalef(20.0,15.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,1,1);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+			//assentoFrente
+			glPushMatrix();
+				glTranslatef(30.0,0.0,70.0);
+				glRotatef(90,0.0,1.0,0.0);
+				glScalef(70.0,15.0,1.0);
+				drawMyBox(1.0,1.0,1.0,32,3,3);
+				//glRectf(0.0,0.0,1.0,1.0);
+			glPopMatrix();
+		myMaterial(TRANSPARENTE);
+}
+
+void apoiomesa(){
+	myMaterial(PNEU);
+	glPushMatrix();
+		glTranslatef(85.0,15.0,70.0);
+		glRotatef(90,1,0,0);
+		glScalef(3,3,15);
+		myCylinder(1, 1, 100,1);
+	glPopMatrix();
+	glPushMatrix();
+		glTranslatef(115.0,15.0,70.0);
+		glRotatef(90,1,0,0);
+		glScalef(3,3,15);
+		myCylinder(1, 1, 100,1);
+	glPopMatrix();
+	glPushMatrix();
+		glTranslatef(85.0,15.0,120.0);
+		glRotatef(90,1,0,0);
+		glScalef(3,3,15);
+		myCylinder(1, 1, 100,1);
+	glPopMatrix();
+	glPushMatrix();
+		glTranslatef(115.0,15.0,120.0);
+		glRotatef(90,1,0,0);
+		glScalef(3,3,15);
+		myCylinder(1, 1, 100,1);
+	glPopMatrix();
+}
+
+void tampomesa(){
+	glPushMatrix();
+		glTranslatef(80.0,14.0,65.0);
+		glScalef(40,10,60);
+		myMaterial(VERDE);
+		drawMyBox(1,1,1,1,1,1);
+	glPopMatrix();
+}
+
+
+void drawArvore()
+{
+	int temp = 4.0;
+	//BASE
+	glPushMatrix();
+	glRotatef(-90.0, 1.0, 0.0, 0.0);
+	myMaterial(PNEU);
+	glutSolidCone(radiusBaseConeArvore, alturaConeArvore, slicesConeArvore, stacksConeArvore);
+	myMaterial(TRANSPARENTE);
+	glPopMatrix();
+	//TRIANGULO em X
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 8);
+	
+	glBegin(GL_POLYGON);
+		glNormal3d(0.0, 0.0, 1.0);
+		glTexCoord2f(0.0, 0.0); glVertex3d(-larguraArvore/2.0, alturaConeArvore, 0.0);
+		glTexCoord2f(0.5*temp, 1.0*temp); glVertex3d(0.0, alturaConeArvore+alturaArvore, 0.0);
+		glTexCoord2f(1.0*temp, 0.0); glVertex3d(larguraArvore/2.0, alturaConeArvore, 0.0);
+
+	glEnd();
+
+	glDisable(GL_TEXTURE_2D);
+	
+	//TRIANGULO em Z
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 8);
+	
+	glBegin(GL_POLYGON);
+	glNormal3d(1.0, 0.0, 0.0);
+	glTexCoord2f(0.0, 0.0); glVertex3d(0.0, alturaConeArvore, -larguraArvore/2.0);
+	glTexCoord2f(0.5*temp, 1.0*temp); glVertex3d(0.0, alturaConeArvore+alturaArvore, 0.0);
+	glTexCoord2f(1.0*temp, 0.0); glVertex3d(0.0, alturaConeArvore, larguraArvore/2.0);
+	glEnd();
+	
+	glDisable(GL_TEXTURE_2D);
+}
+
+void mesa(){
+	//myMaterial(MADEIRA);
+	apoiomesa();
+	myMaterial(VIDRO);
+	tampomesa();
+}
+void drawHemiSphere(double radius, int slices)
+{//DESENHA UMA HEMI-ESFERA NA ORIGEM
+	const double pi = acos(-1.0);
+	
+	double teta = 2.0*pi/slices, fi= 2.0*pi/slices;
+	double sinAuxI,sinAuxJ, cosAuxI, sinFi;
+	
+	vector< Vertex> vec0, vec1;
+	Vertex normal;
+	glColor3f(0.86,0.08,0.24);	
+	for(double j=0.0; j<pi;j+=fi)
+	{	
+		for(double i =0.0; i < pi; i+= teta)
+		{
+			sinAuxI = sin(i);
+			cosAuxI = cos(i);
+			sinAuxJ = sin(j);
+			sinFi = sin(j+fi);
+			
+			vec0.push_back(Vertex(radius*sinAuxJ*cosAuxI, radius*sinAuxJ*sinAuxI, radius*cos(j)));
+			vec1.push_back(Vertex(radius*sinFi*cosAuxI, radius*sinFi*sinAuxI, radius*cos(j+fi)));
+		}
+		
+		for(int k = 0; k<vec0.size()-1;k++)
+		{
+			glBegin(GL_POLYGON);
+				normal=normalizarVector(Vertex(vec0[k].x, vec0[k].y, vec0[k].z));
+				glNormal3d(normal.x, normal.y, normal.z);
+				glVertex3d(vec0[k].x, vec0[k].y, vec0[k].z);
+			
+				normal=normalizarVector(Vertex(vec1[k].x, vec1[k].y, vec1[k].z));
+				glNormal3d(normal.x, normal.y, normal.z);
+				glVertex3d(vec1[k].x, vec1[k].y, vec1[k].z);
+			
+				normal=normalizarVector(Vertex(vec1[k+1].x, vec1[k+1].y, vec1[k+1].z));
+				glNormal3d(normal.x, normal.y, normal.z);
+				glVertex3d(vec1[k+1].x, vec1[k+1].y, vec1[k+1].z);
+			
+				normal=normalizarVector(Vertex(vec0[k+1].x, vec0[k+1].y, vec0[k+1].z));
+				glNormal3d(normal.x, normal.y, normal.z);
+				glVertex3d(vec0[k+1].x, vec0[k+1].y, vec0[k+1].z);
+			glEnd();
+		}
+		vec0.clear();
+		vec1.clear();
+	}
+	myMaterial(TRANSPARENTE);
+}
+void drawCandeeiro()
+{	
+	
+	const double pi = acos(-1.0);
+	myMaterial(FERRO);
+	//BASE
+	glPushMatrix();
+	glRotatef(-90.0, 1.0, 0.0, 0.0);
+	gluCylinder(glQ, candeeiroBaseRadiusB, candeeiroTopoRadiusB, candeeiroHeightB, candeeiroSlicesB, candeeiroStacksB);
+	glPopMatrix();
+	//CONE
+	glPushMatrix();
+	glTranslatef(0.0, candeeiroHeightB, 0.0);
+	glRotatef(-22.5, 1.0, 0.0, 0.0);
+	gluCylinder(glQ, candeeiroBaseRadiusC, candeeiroTopoRadiusC, candeeiroHeightC, candeeiroSlicesC, candeeiroStacksC);
+	glPopMatrix();	
+	//BOLA ENTRE A BASE E O CONE	
+	glPushMatrix();
+	glTranslatef(0.0, candeeiroHeightB, 0.0);
+	gluSphere(glQ, candeeiroBaseRadiusB, candeeiroSlicesB, candeeiroSlicesB);
+	glPopMatrix();	
+	//BOLA ENTRE O CONE E A HEMIESFERA
+	glPushMatrix();
+	glTranslatef(0.0, candeeiroHeightB+sin(22.5*pi/180.0)*candeeiroHeightC, sin((90+22.5)*pi/180.0)*candeeiroHeightC);
+	gluSphere(glQ, candeeiroTopoRadiusC*2, candeeiroSlicesC, candeeiroSlicesC);
+	glPopMatrix();	
+
+	myMaterial(ROSA);
+    //HEMI-ESFERA
+	glPushMatrix();
+	glTranslatef(0.0, candeeiroHeightB+sin(22.5*pi/180.0)*candeeiroHeightC-candeeiroHemiSphereRadius-candeeiroTopoRadiusC, sin((90+22.5)*pi/180.0)*candeeiroHeightC);
+	glRotatef(-11.25, 1.0, 0.0, 0.0);
+	drawHemiSphere(candeeiroHemiSphereRadius, candeeiroHemiSphereSlices);
+	glPopMatrix();
+	//COR ANTES DA HEMISPHERE SER PINTADA
+	myMaterial(TRANSPARENTE);
+}
+
+
+void drawArmario()
+{
+	
+	//DESENHAR ARMARIO PORTA ESQUERA
+	glPushMatrix();
+		glTranslatef(60.0, -50.0, 200.0);
+		glRotatef(180.0, 0.0, 1.0, 0.0);
+		glRotatef(90.0, 0.0, 0.0, 1.0);
+		glScalef(100.0, 1.0, 30.0);
+		drawMyBox(1.0,1.0,1.0,20,5,3);
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+// PORTA DIREITA
+		glPushMatrix();
+		glTranslatef(140.0, -50.0, 200.0);
+		glRotatef(180.0, 0.0, 1.0, 0.0);
+		glRotatef(90.0, 0.0, 0.0, 1.0);
+		glScalef(100.0, 1.0, 30.0);
+		drawMyBox(1.0,1.0,1.0,20,5,3);
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+// PARTE DE CIMA
+
+		glPushMatrix();
+		glTranslatef(60.0, 50.0, 170.0);
+		//glRotatef(180.0, 0.0, 1.0, 0.0);
+		//glRotatef(90.0, 0.0, 0.0, 1.0);
+		glScalef(81.0, 1.0, 30.0);
+		drawMyBox(1.0,1.0,1.0,20,5,3);
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+	//VIDRO DA FRENTE
+	glDisable(GL_TEXTURE_2D);
+	glPushMatrix();
+		glTranslatef(55.0, -80.0, 180.0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+	    myMaterial(VIDRO);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glTranslated(10.0, 30.0, 5.0);
+		//drawMyBox(35,0,100);
+		glRotatef(90,0,0,1);
+		glScalef(100,1,35);
+		drawRectanguloNormal();
+		glDisable(GL_BLEND);
+	glPopMatrix();
+
+		glDisable(GL_TEXTURE_2D);
+	glPushMatrix();
+		glTranslatef(100.0, -80.0, 180.0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+	    myMaterial(VIDRO);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glTranslated(10.0, 30.0, 5.0);
+		//drawMyBox(35,0,100);
+		glRotatef(90,0,0,1);
+		glScalef(100,1,35);
+		drawRectanguloNormal();
+		glDisable(GL_BLEND);
+	glPopMatrix();
+
+	//PARTE CENTRAL
+	glPushMatrix();
+		myMaterial(TRANSPARENTE);
+		glTranslatef(95, -50.0, 170.0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+		glRotatef(90, 0.0, 0.0, 1.0);
+		glScalef(100, 1, 10);
+		drawMyBox(1.0,1.0,1.0,20,5,1);
+	glPopMatrix();
+
+}
+
+void drawCadeira()
+{ myMaterial(T3);
+	//TAMPO
+	glPushMatrix();
+		glTranslatef(0.0, 40.0, 0.0);
+		glScalef(20.0, 1.0, 20.0);
+		drawMyBox(1.0, 1.0, 1.0, 20, 1,1);
+	glPopMatrix();
+	
+	//PERNAS
+	glPushMatrix();
+		glTranslatef(17.0, 39.9, 4.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myCylinder(1,22.5,100,1,20,1,1);
+	glPopMatrix();
+
+		glPushMatrix();
+		glTranslatef(4.0, 39.9, 4.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myCylinder(1,22.5,100,1,20,1,1);
+	glPopMatrix();
+
+		glPushMatrix();
+		glTranslatef(17.0, 39.9, 17.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myCylinder(1,22.5,100,1,20,1,1);
+	glPopMatrix();
+
+		glPushMatrix();
+		glTranslatef(4.0, 39.9, 17.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myCylinder(1,22.5,100,1,20,1,1);
+	glPopMatrix();
+
+
+	//PERNAS LATERAIS
+	glPushMatrix();
+		glTranslatef(17.0, 25.0, 4.0);
+		myCylinder(1,13,100,1,20,1,1);
+	glPopMatrix();
+
+	glPushMatrix();
+		glTranslatef(4.0, 25.0, 4.0);
+		myCylinder(1,13,100,1,20,1,1);
+	glPopMatrix();
+
+	glPushMatrix();
+		glTranslatef(4.0, 25.0, 4.0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+		myCylinder(1,13,100,1,20,1,1);
+	glPopMatrix();
+
+	glPushMatrix();
+		glTranslatef(4.0, 25.0, 17.0);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+		myCylinder(1,13,100,1,20,1,1);
+	glPopMatrix();
+}
+
+
+
+void drawCand(){
+
+	//BASE
+	glPushMatrix();
+		glTranslatef(0, 42.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myMaterial(VERMELHO);
+		myCylinder(4, 1.5 ,30, true);
+	glPopMatrix();
+	//VIDRO
+		glPushMatrix();
+		glTranslatef(0.0, 50.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+	    myMaterial(NEON);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		myCylinder(3, 8 ,30, true);
+		glDisable(GL_BLEND);
+	glPopMatrix();
+//CONE
+	myMaterial(VERMELHO);
+	glPushMatrix();
+		glTranslatef(0, 50.0, 0.0);
+		glRotatef(-90.0, 1.0, 0.0, 0.0);
+		myMaterial(VERMELHO);
+		glutSolidCone(5,3 ,20,20);
+	glPopMatrix();
+
+}
+
+void cenaSeraphin(){
+GLUquadric* glQ = gluNewQuadric();
+	
+myMaterial(TRANSPARENTE);
+
+//MY FACE
+	glPushMatrix();
+		glTranslatef(20.0, 20.0, -175.0);
+		glRotatef(-180.0, 0.0,1.0,0.0);
+		glRotatef(-90.0, 1.0,0.0,0.0);
+		glScalef(-50.0,1.0, 50.0);
+		drawMyBox(1.0, 1.0, 1.0,35, 1, 1 );
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+
+
+//Cilindo geral
+glPushMatrix();
+glTranslatef(0.0, -80, 0.0);
+glRotatef(-90.0, 1.0, 0.0, 0.0);
+myCylinder(1000.0, 400.0, 100, true, 15, 1, 1);
+glPopMatrix();
+
+//PARTE DE CIMA DO CILINDRO GERAL
+	glPushMatrix();
+	glTranslatef(0.0, 315.9, -300);
+	glRotatef(90.0, 1.0, 0.0, 0.0);
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 15);
+	gluQuadricDrawStyle(glQ, GLU_FILL);
+	gluQuadricTexture(glQ, GL_TRUE);
+	gluDisk(glQ, 0.0, 1000.0 , 30, 30);
+	glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+
+//CHAO GERAL
+		
+		glPushMatrix();
+		glTranslatef(-500.0,0.0, -500-0 );
+
+			myMaterial(TRANSPARENTE);
+			glEnable(GL_MAP2_VERTEX_3);
+			glEnable(GL_MAP2_NORMAL);
+			glEnable(GL_MAP2_COLOR_4);
+			glEnable(GL_MAP2_TEXTURE_COORD_2);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints7[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints2[0][0]);
+
+	glMapGrid2f(40, 0.0,1.0, 60, 0.0,1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 9);
+	
+	glEvalMesh2(GL_FILL, 0,40, 0,60);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+		glPopMatrix();
+
+//DESENHAR POCO
+		glPushMatrix();
+			glTranslatef(-300.0, 10, -300);
+			glRotatef(90.0, 1.0, 0.0, 0.0);
+			glScalef(3.0, 3.0, 3.0);
+			myCylinder(10.0, 20.0, 100, true,  10  , 1.1, 1.1);
+		glPopMatrix();
+
+	//PARTE DE CIMA DO POCO
+	glPushMatrix();
+	glTranslatef(-300.0, 10.1, -300);
+	glRotatef(90.0, 1.0, 0.0, 0.0);
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 18);
+	gluQuadricDrawStyle(glQ, GLU_FILL);
+	gluQuadricTexture(glQ, GL_TRUE);
+	gluDisk(glQ, 0.0, 30.0 , 30, 30);
+	glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+
+	//CILINDROS A VOLTA DO POCO
+
+	glPushMatrix();
+		glTranslatef(-300.0, 70.0, -250.0);
+		glRotatef(90.0, 1.0, 0.0,0.0);
+		myCylinder(5, 120, 100, true, 20, 1,1);
+	glPopMatrix();
+
+
+	glPushMatrix();
+		glTranslatef(-300.0, 70.0, -350.0);
+		glRotatef(90.0, 1.0, 0.0,0.0);
+		myCylinder(5, 120, 100, true, 20, 1,1);
+	glPopMatrix();
+
+	glPushMatrix();
+		glTranslatef(-300.0, 65.0, -350.0);
+		glRotatef(90.0, 0.0, 0.0,1.0);
+		myCylinder(5, 100, 100, true, 20, 1,1);
+	glPopMatrix();
+myMaterial(TRANSPARENTE);
+		glPushMatrix();
+		glTranslatef(-300.0, 69.0, -300.0);
+		glRotatef(90.0, 1.0, 0.0,0.0);
+		myCylinder(1, 100, 100, true, 35, 1,1);
+	glPopMatrix();
+
+
+//PUSH MATRIX PARA A CENA GERAL
+		glPushMatrix();
+		glTranslatef(-50.0, 0.0, -75.0);
+
+	//DESENHAR CHAO	
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+	glEnable(GL_MAP2_TEXTURE_COORD_2);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints3[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints3[0][0]);
+
+	glMapGrid2f(40, 0.0,1.0, 60, 0.0,1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 12);
+	
+	glEvalMesh2(GL_FILL, 0,40, 0,60);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+
+//DESENHAR JANELA 
+	//GROSSURA DAS LINHAS
+	glLineWidth(10.0);
+
+
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints4[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	//glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints2[0][0]);
+
+	glMapGrid2f(4, 0.0,1.0, 12, 0.0,1.0);
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 14);
+
+	glEvalMesh2(GL_LINE, 0,4, 0,12);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+
+//DESENHAR PARTE DE BAIXO DA JANELA DE FORA
+	glPushMatrix();
+		glTranslatef(-150, 0, 200);
+		glRotatef(90.0, 0.0,1.0,0.0);
+		glRotatef(90.0, 1.0,0.0,0.0);
+		glScalef(300.0,1.0, 50.0);
+		drawMyBox(1.0, 1.0, 1.0,11, 5, 1.5 );
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+//DESENHAR PARTE DE CIMA DA JANELA DE FORA
+	glPushMatrix();
+		glTranslatef(-150, 100, 200);
+		glRotatef(90.0, 0.0,1.0,0.0);
+		glRotatef(90.0, 1.0,0.0,0.0);
+		glScalef(300.0,1.0, 50.0);
+		drawMyBox(1.0, 1.0, 1.0,11, 5, 1.5 );
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+//DESENHAR FRENTE PRISAO
+
+	//myMaterial(TRANSPARENTE);
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints5[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints3[0][0]);
+
+	glMapGrid2f(4, 0.0,1.0, 12, 0.0,1.0);
+		glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 14);
+	glEvalMesh2(GL_LINE, 0,4, 0,12);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+
+	// PAREDE ESQUERDA PRISAO
+	glPushMatrix();
+		glTranslatef(150.0, 100.0, 200.0);
+		glRotatef(180.0, 0.0,1.0,0.0);
+		glRotatef(90.0, 1.0,0.0,0.0);
+		glScalef(300.0,1.0, 150.0);
+		drawMyBox(1.0, 1.0, 1.0,11, 5, 3 );
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+
+	// PAREDE DIREITA PRISAO
+	glPushMatrix();
+		glTranslatef(150.0, 100.0, -100.0);
+		glRotatef(180.0, 0.0,1.0,0.0);
+		glRotatef(90.0, 1.0,0.0,0.0);
+		glScalef(300.0,1.0, 150.0);
+		drawMyBox(1.0, 1.0, 1.0,11, 5, 3 );
+		//drawRectanguloNormal();
+	glPopMatrix();
+
+
+//DESENHAR TECTO
+	//myMaterial(TRANSPARENTE);
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+	glEnable(GL_MAP2_TEXTURE_COORD_2);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints6[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints2[0][0]);
+
+	glMapGrid2f(40, 0.0,1.0, 60, 0.0,1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 11);
+	
+	glEvalMesh2(GL_FILL, 0,40, 0,60);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+
+
+
+	//POP MATRIX DA CENA GERAL
+	glPopMatrix();
+
+
+
+	//DESENHAR BARRIL
+		glPushMatrix();
+			glTranslatef(11.0, -1,11.0);
+			glRotatef(90.0, 1.0, 0.0, 0.0);
+			//glScalef(3.0, 3.0, 3.0);
+			myCylinder(22.5, 50.0, 100, true,  16 , 0.1, 2);
+		glPopMatrix();
+	//PARTE DE CIMA DO BARRIL
+	glPushMatrix();
+		glTranslatef(11.0, -0.9,11.0);
+		glRotatef(-90.0, 0.0, 1.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		myMaterial(TRANSPARENTE);
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 17);
+		gluQuadricDrawStyle(glQ, GLU_FILL);
+		gluQuadricTexture(glQ, GL_TRUE);
+		gluDisk(glQ, 0.0, 22.5 , 100, 100);
+		glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+
+//DESENHAR SOFA
+	glPushMatrix();
+		glTranslatef(-199, -50, -172);
+		glScalef(1.2,1,1.6);
+		sofa();
+	glPopMatrix();
+	
+//DESENHAR CADEIRA 1
+	glPushMatrix();
+		glTranslatef(0.0, -76.0, -40.0);
+		glScalef(1.0, 1.4, 1.0);
+		drawCadeira();
+	glPopMatrix();
+
+//DESENHAR CADEIRA 2
+	glPushMatrix();
+		glTranslatef(0.0, -76.0, 40.0);
+		glScalef(1.0, 1.4, 1.0);
+		drawCadeira();
+	glPopMatrix();
+	myMaterial(TRANSPARENTE);
+//PAREDE FRENTE
+/*	glPushMatrix();
+		glTranslatef(100, 40, 125);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		glScalef(60, 1.0, 90.0);
+		drawMyBox(1.0, 1.0, 1.0, 11, 1, 2.6);
+	glPopMatrix(); */
+/*
+	glPushMatrix();
+		glTranslatef(300, 40, 125);
+		glRotatef(90.0, 0.0, 1.0, 0.0);
+		glRotatef(90.0, 1.0, 0.0, 0.0);
+		glScalef(60, 1.0, 90.0);
+		drawMyBox(1.0, 1.0, 1.0);
+	glPopMatrix();
+*/
+
+
+
+	//DRAW ARMARIO
+	glPushMatrix();
+		glTranslatef(-60, 0.0, -76);
+		drawArmario();
+	glPopMatrix();
+	
+	myMaterial(TRANSPARENTE);
+
+
+}
+void cenaPrud(){
+
+glPushMatrix();
+glTranslatef(0.0, -80, 0.0);
+glRotatef(-90.0, 1.0, 0.0, 0.0);
+myCylinder(1000.0, 400.0, 100, true, 33, 1, 1);
+glPopMatrix();
+
+//PARTE DE CIMA DO CILINDRO GERAL
+	glPushMatrix();
+	glTranslatef(0.0, 315.9, -300);
+	glRotatef(90.0, 1.0, 0.0, 0.0);
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 33);
+	gluQuadricDrawStyle(glQ, GLU_FILL);
+	gluQuadricTexture(glQ, GL_TRUE);
+	gluDisk(glQ, 0.0, 1000.0 , 30, 30);
+	glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
+
+
+glPushMatrix();
+		glTranslatef(-500.0,25.0, -500-0 );
+
+			myMaterial(TRANSPARENTE);
+			glEnable(GL_MAP2_VERTEX_3);
+			glEnable(GL_MAP2_NORMAL);
+			glEnable(GL_MAP2_COLOR_4);
+			glEnable(GL_MAP2_TEXTURE_COORD_2);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints7[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints4[0][0]);
+
+	glMapGrid2f(40, 0.0,1.0, 60, 0.0,1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 34);
+	
+	glEvalMesh2(GL_FILL, 0,40, 0,60);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+		glPopMatrix();
+
+
+
+	//DESENHAR CHAO	
+	myMaterial(TRANSPARENTE);
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+	glEnable(GL_MAP2_TEXTURE_COORD_2);
+
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints2[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints2[0][0]);
+
+	glMapGrid2f(40, 0.0,1.0, 60, 0.0,1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 3);
+	
+	glEvalMesh2(GL_FILL, 0,40, 0,60);	
+	
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+	glDisable(GL_MAP2_TEXTURE_COORD_2);
+
+	myMaterial(TRANSPARENTE);
+	glPushMatrix();
+		glTranslatef(-75,-25,-75);
+		myMaterial(TRANSPARENTE);
+		glPushMatrix();
+			drawMyBox(150, 0.1, 100,4,2,2);
+			drawMyBox(0.1,  150, 100,4,2,2);
+			glTranslatef(0.0,0.0,150);
+			drawMyBox(0.1,  150, 100,4,2,2);
+		glPopMatrix();
+		glPushMatrix();
+			glTranslatef(0.0,100,75);
+			glRotatef(90.0,0.0,1.0,0.0);
+			glScalef(1,0.5,1);
+			myCylinder(75, 150, 100,false,5,1,3);
+		glPopMatrix();	
+
+	glPushMatrix();
+		sofa();
+		myMaterial(TRANSPARENTE);
+	glPopMatrix();
+
+	glPushMatrix();
+	myMaterial(FERRO);
+	//	glTranslatef(-70,-25,-65);
+		glScalef(0.8,1,0.8);
+		mesa();	
+	glPopMatrix();
+	glPushMatrix();
+		glTranslatef(70,24,65);
+		glRotatef(45,0,1,0);
+		myMaterial(PNEU);
+		drawCandeeiro();
+	glPopMatrix();
+	glPushMatrix();
+		glTranslatef(0,55,50);
+		glRotatef(90,0,1,0);
+		myMaterial(PNEU); 
+		drawCandeeiro();
+	glPopMatrix();
+
+	myMaterial(PNEU);
+	glPushMatrix();
+		glTranslatef(0,-1.1,0);
+		glScalef(20.0,1,20.0);
+		drawMyBox(1,1,1);
+	glPopMatrix();
+	myMaterial(TRANSPARENTE);
+	glPushMatrix();
+		glTranslatef(30,0,100);
+		drawArvore();
+	glPopMatrix();
+	myMaterial(TRANSPARENTE);
+glPopMatrix();
+glPopMatrix();
+
+}
+void drawTabuleiro()
+{
+
+	glEnable(GL_MAP2_VERTEX_3);
+	glEnable(GL_MAP2_NORMAL);
+	glEnable(GL_MAP2_COLOR_4);
+	glEnable(GL_MAP2_TEXTURE_COORD_2);
+	
+	glMap2f(GL_MAP2_VERTEX_3, 0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &ctrlpoints[0][0]);
+	glMap2f(GL_MAP2_NORMAL,   0.0, 1.0, 3, 2,  0.0, 1.0, 6, 2,  &nrmlcompon[0][0]);
+	glMap2f(GL_MAP2_COLOR_4,  0.0, 1.0, 4, 2,  0.0, 1.0, 8, 2,  &colorpoints[0][0]);
+	glMap2f(GL_MAP2_TEXTURE_COORD_2,  0.0, 1.0, 2, 2,  0.0, 1.0, 4, 2,  &textpoints[0][0]);
+	
+	glMapGrid2f(20, 0.0, 1.0, 20, 0.0, 1.0);
+	
+	glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 2001);
+	
+	glEvalMesh2(GL_FILL, 0,20, 0,20);	
+	
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_MAP2_VERTEX_3);
+	glDisable(GL_MAP2_NORMAL);
+	glDisable(GL_MAP2_COLOR_4);
+	//glDisable(GL_COLOR_MATERIAL);
+	glDisable(GL_MAP2_TEXTURE_COORD_2);	
+
+}
+
+void call_newgame(int ID){
+	startTime = time(NULL);	
+	for(int i=0;i<8;i++)
+		for(int j=0;j<8;j++)
+			tab.tabuleiro[i][j]=tab_aux.tabuleiro[i][j];
+	jogador_vitorioso=0;
+	initPosTorres();
+	while(!lista_jogadas.empty())
+		lista_jogadas.pop();
+	while(!kamisado.filme.empty())
+		kamisado.filme.pop();
+	while(!kamisado.filme_aux.empty())
+		kamisado.filme_aux.pop();
+
+	while(!filme_jogadas.empty())
+		filme_jogadas.pop();
+
+	while(!filme_jogadas_aux.empty())
+		filme_jogadas_aux.pop();
+
+//	tab.iniciar_tab();
+	kamisado.apagar_jogadas();
+	comecou_jogo=true;
+	gaming=false;
+}
+void call_modo(int ID){
+	tab.modo=numero_jogo;
+}
+void call_nivel(int ID){
+	tab.nivel=nivel_jogo;
+}
+void call_undo(int ID){
+	if(!movie_play  && !animated && jogador_vitorioso==0)
+	if(!lista_jogadas.empty()){
+			kamisado.undo(tab);
+		
+			for(int i=0;i<16;i++)
+				posTorres[i]=lista_jogadas.top().posicaoTorres[i];
+			
+			lista_jogadas.pop();
+
+			if(tab.jogador==1){
+				pk->setEstado(17-tab.NTorre+10);
+				dx = posTorres[17-tab.NTorre-1].x;		
+				dz = posTorres[17-tab.NTorre-1].z;
+			}else{
+				pk->setEstado(tab.NTorre+10);
+				dx = posTorres[tab.NTorre-1].x;		
+				dz = posTorres[tab.NTorre-1].z;
+			}
+			torre_selecionada=true;
+			casa_selecionada=false;
+			movx=movz=0;
+
+			while(!filme_jogadas.empty())
+				filme_jogadas.pop();
+
+			while(!filme_jogadas_aux.empty())
+				filme_jogadas_aux.pop();
+
+			while(!kamisado.filme.empty())
+				kamisado.filme.pop();
+
+			while(!kamisado.filme_aux.empty())
+				kamisado.filme_aux.pop();
+		
+	}
+
+}
+
+void call_filme(int ID){
+	if(!movie_play && !animated && comecou_jogo && !movie_play && jogador_vitorioso==0){
+		queue <estadoTorres> aux;
+		queue <Tabuleiro> aux2;
+
+		while(!filme_jogadas_aux.empty())
+			filme_jogadas_aux.pop();
+		
+		while(!kamisado.filme_aux.empty())
+			kamisado.filme_aux.pop();
+
+		while(!filme_jogadas.empty()){
+			filme_jogadas_aux.push(filme_jogadas.front());
+			aux.push(filme_jogadas.front());
+			filme_jogadas.pop();
+		}
+
+		while(!kamisado.filme.empty()){
+			kamisado.filme_aux.push(kamisado.filme.front());
+			aux2.push(kamisado.filme.front());
+			kamisado.filme.pop();
+		}
+
+		while(!aux.empty()){
+			filme_jogadas.push(aux.front());
+			aux.pop();
+		}
+
+		while(!aux2.empty()){
+			kamisado.filme.push(aux2.front());
+			aux2.pop();
+		}
+		movie_play=true;
+	}
+}
+
+void call_cena(int ID){
+	obj_pos[0]=0;
+	obj_pos[1]=0; 
+	obj_pos[2]=0;
+	for(int i=0;i<16;i++)
+		view_rotate[i]=view_rotate_aux[i];
+}
+
+void call_btt_joga(int ID){
+	if(jogador_vitorioso==0)
+		if(tab.modo==2 || (tab.modo==3 && tab.pc_joga==1)){
+			if(!parser.deadlock(tab,sock)){
+				animated=false;
+				pk_tab->resetEstados();
+					pk->resetEstados();
+				if(tab.jogador==1){
+				pk->setEstado(17-tab.NTorre+10);
+				dx = posTorres[17-tab.NTorre-1].x;		
+				dz = posTorres[17-tab.NTorre-1].z;
+				}else{
+				pk->setEstado(tab.NTorre+10);
+				dx = posTorres[tab.NTorre-1].x;		
+				dz = posTorres[tab.NTorre-1].z;
+				}
+
+				kamisado.jogada(tab);
+				Estado_actual.copia(posTorres);
+				lista_jogadas.push(Estado_actual);
+
+				parser.jogada_pc(tab,sock);
+			
+				int coord= 64-((tab.coluna)+(tab.linha-1)*8);
+
+				Estado_actual.coord=coord;
+				filme_jogadas.push(Estado_actual);
+			
+				movx= (float)(posTab[coord].x - dx);
+				movz= (float)(posTab[coord].z - dz);
+				pk_tab->setEstado(coord+30);
+				dx=dz=dxAc=dzAc=0;
+
+				jogador_vitorioso=kamisado.fim_jogo(tab);
+				parser.ganhou(tab_aux,sock);
+
+				if(jogador_vitorioso==1)
+					pontos2++;
+				else if(jogador_vitorioso==2)
+					pontos1++;
+	
+				gaming=true;
+				torre_selecionada=false;
+				casa_selecionada=true;
+			}
+		}
+}
